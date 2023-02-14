@@ -1,0 +1,100 @@
+
+ 
+
+#Copyright by Senon Uzeiroski#Made by Senon Uzeiroski
+# Script imports Filepaths from a input.txt and deletes them and creates a output.csv
+
+# Updated Version - Shows ExecutionTime
+
+$Paths = Get-Content "C:\Users\Public\input.txt" | Where-Object {$_.trim() -ne "" }
+
+$FileDeletedDetails = @()
+
+$FileLength = 0
+
+$FileCount = 0
+
+$stopwatch = [diagnostics.stopwatch]::StartNew()
+
+ 
+
+ 
+
+ 
+
+foreach($Path in $Paths)
+
+{
+
+  $ModifiedPath = $Path.Replace("\\",[file://%3f/UNC/]\\?\UNC\)
+
+  if(Test-Path $ModifiedPath)
+
+  {
+
+      $FileDetails = (Get-ChildItem -Path "C:\Users\Public\input.txt" -Hidden -Recurse | measure Length -s)
+
+      $FileLength = ((Get-Item -LiteralPath $ModifiedPath).length)/1MB #$FileDetails.Sum/1MB
+
+      $FileCount = $FileDetails.Count
+
+      $FileDeletedDetails += [pscustomobject]@{
+
+      
+
+          "Files Deleted" = $FileCount
+
+          "File Path" = $Path
+
+          "File Size" = "{0:N2} MB" -f $FileLength
+
+          "Execution Time" = $ExecutionTime
+
+      }
+
+ 
+
+   Remove-Item -LiteralPath $ModifiedPath -Recurse -ErrorAction Continue
+
+  }
+
+ 
+
+  else
+
+  {
+
+   $FileDeletedDetails += [pscustomobject]@{
+
+      
+
+          "Files Deleted" = "File doesn't exists"
+
+          "File Path" = $Path
+
+          "File Size" = 0
+
+      }
+
+  }
+
+}
+
+ 
+
+$stopwatch.Stop()
+
+$ExecutionTime = $stopwatch.Elapsed.ToString()
+
+$FileDeletedDetails += [pscustomobject]@{
+
+    "Execution Time" = $ExecutionTime
+
+  }
+
+ 
+
+$FileDeletedDetails | Export-Csv "C:\Users\Public\Outputs.csv" -NoTypeInformation
+
+
+ 
