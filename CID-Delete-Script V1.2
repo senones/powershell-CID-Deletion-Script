@@ -1,0 +1,45 @@
+#Version 1.2 Updated Columns showing execution time and MB File Size
+
+$Paths = Get-Content "C:\Users\Public\input.txt" | Where-Object {$_.trim() -ne "" }
+$FileDeletedDetails = @()
+
+$stopwatch = [diagnostics.stopwatch]::StartNew()
+
+foreach ($Path in $Paths) {
+    $ModifiedPath = $Path.Replace("\\", "\\?\UNC\")
+
+    if (Test-Path $ModifiedPath) {
+        $DeletedFiles = Get-ChildItem -LiteralPath $ModifiedPath -Recurse -Force | Where-Object {!$_.PSIsContainer} | Select-Object FullName, Length
+        $FileLength = ($DeletedFiles | Measure-Object -Property Length -Sum -ErrorAction SilentlyContinue).Sum / 1MB
+
+        Remove-Item -LiteralPath $ModifiedPath -Recurse -Force -ErrorAction Continue
+
+        $FileDeletedDetails += [pscustomobject]@{
+            "Files Deleted" = "Yes"
+            "File Path" = $Path
+            "File Size" = "{0:N2} MB" -f $FileLength
+            "Deleted Files" = ($DeletedFiles | ForEach-Object { $_.FullName }) -join "`n"
+        }
+    } else {
+        $FileDeletedDetails += [pscustomobject]@{
+            "Files Deleted" = "File doesn't exist"
+            "File Path" = $Path
+            "File Size" = 0
+            "Deleted Files" = ""
+        }
+    }
+}
+
+$stopwatch.Stop()
+$ExecutionTime = $stopwatch.Elapsed.ToString()
+
+$Summary = [pscustomobject]@{
+    "Files Deleted" = "Execution Time: $($ExecutionTime)"
+    "File Path" = ""
+    "File Size" = ""
+    "Deleted Files" = ""
+}
+
+$FileDeletedDetails += $Summary
+
+$FileDeletedDetails | Export-Csv "C:\Users\Public\Outputs.csv" -NoTypeInformation -Force
